@@ -86,10 +86,29 @@
     .btn-save { background: #2C3E50; color: white; flex: 1; }
     .btn-delete { padding: 11px 14px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 16px; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
 <body>
   <div id="app"></div>
   <script>
+    // ============================================================
+    // 🔥 Firebase 설정 — 본인 프로젝트 값으로 교체하세요
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_HQGSE9bAR9yaz1jk8WU-SD1OCM9JkMg",
+      authDomain: "tree-region.firebaseapp.com",
+      databaseURL: "https://tree-region-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tree-region"
+    };
+
+    let db = null;
+    const configValid = true;  // 본인 Firebase 값 적용됨
+    if (configValid) {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+    }
+
     const JOBS = [
       { name: '수호성', color: '#4F6F96' },
       { name: '검성',   color: '#8B3A3A' },
@@ -125,25 +144,45 @@
     };
 
     let state = {
-      tab: 'members', members: [], attendance: {},
-      selectedJob: '수호성', editingMember: null, showForm: false
+      tab: 'members',
+      members: null, attendance: null,
+      selectedJob: '수호성', editingMember: null, showForm: false,
+      syncStatus: 'connecting'
     };
 
-    function load() {
-      try {
-        const m = localStorage.getItem('tree_members');
-        state.members = m ? JSON.parse(m) : SAMPLE;
-      } catch (e) { state.members = SAMPLE; }
-      try {
-        const a = localStorage.getItem('tree_attendance');
-        state.attendance = a ? JSON.parse(a) : {};
-      } catch (e) { state.attendance = {}; }
+    function initFirebaseSync() {
+      if (!db) return;
+      // 첫 사용 시 샘플 데이터로 초기화
+      db.ref('tree').once('value').then(snap => {
+        if (!snap.exists()) {
+          db.ref('tree/members').set(JSON.stringify(SAMPLE));
+          db.ref('tree/attendance').set('{}');
+        }
+      });
+      // 멤버 변경 실시간 감지
+      db.ref('tree/members').on('value', (snap) => {
+        try {
+          const v = snap.val();
+          state.members = v ? JSON.parse(v) : SAMPLE;
+          state.syncStatus = 'synced';
+        } catch (e) { state.syncStatus = 'error'; }
+        render();
+      });
+      // 출석 변경 실시간 감지
+      db.ref('tree/attendance').on('value', (snap) => {
+        try {
+          const v = snap.val();
+          state.attendance = v ? JSON.parse(v) : {};
+        } catch (e) {}
+        render();
+      });
     }
     function save() {
-      try {
-        localStorage.setItem('tree_members', JSON.stringify(state.members));
-        localStorage.setItem('tree_attendance', JSON.stringify(state.attendance));
-      } catch (e) {}
+      if (!db) return;
+      db.ref('tree/members').set(JSON.stringify(state.members))
+        .catch(() => { state.syncStatus = 'error'; render(); });
+      db.ref('tree/attendance').set(JSON.stringify(state.attendance))
+        .catch(() => { state.syncStatus = 'error'; render(); });
     }
     function setState(updates) {
       state = { ...state, ...updates };
@@ -155,11 +194,24 @@
     }
 
     function render() {
+      if (state.members === null || state.attendance === null) {
+        document.getElementById('app').innerHTML = `
+          <header><div class="h-title">🎄트리</div><div class="h-count">연결 중...</div></header>
+          <div style="padding:60px 20px;text-align:center;color:#94A3B8;font-size:14px;">
+            ⏳ 데이터 동기화 중...
+          </div>`;
+        return;
+      }
       const scrollY = window.scrollY;
       document.getElementById('app').innerHTML = `
         <header>
           <div class="h-title">🎄트리</div>
-          <div class="h-count">총 ${state.members.length}명</div>
+          <div class="h-count">
+            ${state.members.length}명
+            ${state.syncStatus === 'synced' ? '<span style="color:#86EFAC;margin-left:6px;">●</span>' :
+              state.syncStatus === 'error' ? '<span style="color:#F87171;margin-left:6px;">●</span>' :
+              '<span style="opacity:0.5;margin-left:6px;">○</span>'}
+          </div>
         </header>
         <main>
           ${state.tab === 'members' ? renderMembers() : ''}
@@ -364,8 +416,20 @@
       setState({ members: updated, attendance: newAtt, showForm: false, editingMember: null });
     }
 
-    load();
-    render();
+    if (configValid) {
+      initFirebaseSync();
+    } else {
+      document.getElementById('app').innerHTML = `
+        <div style="padding:40px 24px;text-align:center;font-family:-apple-system,sans-serif;background:#FAFAF8;min-height:100vh;">
+          <div style="font-size:56px;margin-bottom:20px;">🔥</div>
+          <h2 style="color:#DC2626;font-size:18px;margin-bottom:14px;">Firebase 설정 필요</h2>
+          <p style="color:#6B7280;font-size:14px;line-height:1.7;">
+            HTML 상단의 <code style="background:#F3F4F6;padding:3px 7px;border-radius:4px;font-size:12px;">firebaseConfig</code> 부분을<br>
+            본인 Firebase 프로젝트 값으로 교체해주세요.
+          </p>
+        </div>
+      `;
+    }
   </script>
 </body>
 </html>
