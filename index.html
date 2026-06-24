@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2C3E50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="🎄트리">
+  <title>🎄트리</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background: #FAFAF8; color: #263238; padding-bottom: env(safe-area-inset-bottom); }
+    button { font-family: inherit; }
+    #app { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 70px; }
+
+    header {
+      background: #2C3E50; color: white;
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top));
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .h-title { font-weight: 600; font-size: 16px; }
+    .h-count { font-size: 12px; opacity: 0.75; }
+    main { flex: 1; }
+
+    .sub-header { padding: 12px 16px 8px; display: flex; align-items: center; justify-content: space-between; background: #FAFAF8; position: sticky; z-index: 10; }
+    .sub-title { font-size: 15px; font-weight: 600; color: #1E293B; }
+    .btn-add { display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: #2C3E50; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+
+    .container { padding: 0 12px 16px; }
+    .job-group { margin-bottom: 16px; }
+    .job-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; color: white; margin-bottom: 8px; }
+    .member-list { display: flex; flex-direction: column; gap: 6px; }
+    .member-card { width: 100%; background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; text-align: left; cursor: pointer; }
+    .member-card:active { background: #F9FAFB; }
+    .member-nick { font-weight: 500; font-size: 14px; color: #111827; }
+    .member-cp { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .edit-arrow { color: #9CA3AF; font-size: 18px; }
+
+    .job-tabs { display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .job-tabs::-webkit-scrollbar { display: none; }
+    .job-tab { padding: 7px 12px; border-radius: 99px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid #E5E7EB; background: white; color: #475569; cursor: pointer; }
+    .hint { padding: 7px 16px; font-size: 11px; color: #64748B; background: #F1F5F9; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
+
+    .att-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .att-nick { font-weight: 500; font-size: 14px; color: #111827; margin-bottom: 8px; }
+    .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .day-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 0; border-radius: 6px; font-weight: 500; border: 1px solid; cursor: pointer; min-height: 46px; }
+    .day-key { font-size: 10px; opacity: 0.7; line-height: 1; }
+    .day-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
+    .day-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+    .day-header { padding: 10px 14px; color: white; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .day-count { font-size: 11px; background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 99px; }
+    .day-body { padding: 10px; }
+    .attendee-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 12px; }
+    .chip-nick { font-weight: 500; color: #111827; }
+    .chip-job { color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+    .empty { text-align: center; color: #94A3B8; font-size: 12px; padding: 16px; }
+
+    nav#bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #E5E7EB; display: grid; grid-template-columns: repeat(3, 1fr); z-index: 20; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px; background: none; border: none; cursor: pointer; color: #94A3B8; }
+    .nav-btn.active { color: #1E293B; }
+    .nav-icon { width: 22px; height: 22px; }
+    .nav-label { font-size: 11px; font-weight: 500; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: flex; align-items: flex-end; }
+    .modal-sheet { background: white; width: 100%; border-radius: 16px 16px 0 0; max-height: 90vh; display: flex; flex-direction: column; }
+    .modal-header { padding: 14px 16px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-weight: 600; font-size: 16px; color: #111827; }
+    .modal-close { background: none; border: none; cursor: pointer; padding: 4px; color: #6B7280; font-size: 20px; line-height: 1; }
+    .modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 500; color: #4B5563; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 11px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .form-input:focus { outline: none; border-color: #2C3E50; }
+    .job-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .job-pick-btn { padding: 10px 4px; border: 1px solid #E5E7EB; border-radius: 6px; background: white; color: #475569; font-size: 12px; font-weight: 500; cursor: pointer; }
+    .modal-footer { padding: 12px 16px; border-top: 1px solid #E5E7EB; display: flex; gap: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    .btn { padding: 11px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; }
+    .btn-cancel { background: #F1F5F9; color: #334155; flex: 1; }
+    .btn-save { background: #2C3E50; color: white; flex: 1; }
+    .btn-delete { padding: 11px 14px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const JOBS = [
+      { name: '수호성', color: '#4F6F96' },
+      { name: '검성',   color: '#8B3A3A' },
+      { name: '궁성',   color: '#5F7F5F' },
+      { name: '살성',   color: '#6B4476' },
+      { name: '마도성', color: '#3F4E8B' },
+      { name: '정령성', color: '#3A7A78' },
+      { name: '호법성', color: '#A07642' },
+      { name: '치유성', color: '#B17188' },
+    ];
+    const DAYS = [
+      { key: '월', label: '월요일', color: '#4F6F96' },
+      { key: '화', label: '화요일', color: '#5F7F5F' },
+      { key: '수', label: '수요일', color: '#B17188' },
+      { key: '목', label: '목요일', color: '#3F4E8B' },
+      { key: '금', label: '금요일', color: '#A07642' },
+      { key: '토', label: '토요일', color: '#8B3A3A' },
+      { key: '일', label: '일요일', color: '#6B4476' },
+    ];
+    const SAMPLE = [
+      { id: 1, nickname: '휘향',     job: '궁성',   cp: 0 },
+      { id: 2, nickname: '무흑',     job: '검성',   cp: 0 },
+      { id: 3, nickname: '레몬쨈',   job: '치유성', cp: 0 },
+      { id: 4, nickname: '묵직한',   job: '수호성', cp: 0 },
+      { id: 5, nickname: '너의엄마', job: '치유성', cp: 0 },
+      { id: 6, nickname: '나나콩',   job: '마도성', cp: 0 },
+      { id: 7, nickname: '자몽쨈',   job: '정령성', cp: 0 },
+    ];
+    const STATUS_STYLES = {
+      'O': { bg: '#DCFCE7', color: '#166534', border: '#86EFAC' },
+      'X': { bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' },
+      '-': { bg: '#F8FAFC', color: '#94A3B8', border: '#E2E8F0' },
+    };
+
+    let state = {
+      tab: 'members', members: [], attendance: {},
+      selectedJob: '수호성', editingMember: null, showForm: false
+    };
+
+    function load() {
+      try {
+        const m = localStorage.getItem('tree_members');
+        state.members = m ? JSON.parse(m) : SAMPLE;
+      } catch (e) { state.members = SAMPLE; }
+      try {
+        const a = localStorage.getItem('tree_attendance');
+        state.attendance = a ? JSON.parse(a) : {};
+      } catch (e) { state.attendance = {}; }
+    }
+    function save() {
+      try {
+        localStorage.setItem('tree_members', JSON.stringify(state.members));
+        localStorage.setItem('tree_attendance', JSON.stringify(state.attendance));
+      } catch (e) {}
+    }
+    function setState(updates) {
+      state = { ...state, ...updates };
+      save();
+      render();
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function render() {
+      const scrollY = window.scrollY;
+      document.getElementById('app').innerHTML = `
+        <header>
+          <div class="h-title">🎄트리</div>
+          <div class="h-count">총 ${state.members.length}명</div>
+        </header>
+        <main>
+          ${state.tab === 'members' ? renderMembers() : ''}
+          ${state.tab === 'attendance' ? renderAttendance() : ''}
+          ${state.tab === 'status' ? renderStatus() : ''}
+        </main>
+        <nav id="bottom-nav">${renderNav()}</nav>
+        ${state.showForm ? renderForm() : ''}
+      `;
+      requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    }
+
+    function renderMembers() {
+      const grouped = {};
+      state.members.forEach(m => {
+        if (!grouped[m.job]) grouped[m.job] = [];
+        grouped[m.job].push(m);
+      });
+      const groups = JOBS.map(job => {
+        const list = grouped[job.name] || [];
+        if (!list.length) return '';
+        return `
+          <div class="job-group">
+            <span class="job-badge" style="background:${job.color}">${esc(job.name)} · ${list.length}명</span>
+            <div class="member-list">
+              ${list.map(m => `
+                <button class="member-card" onclick="openEdit(${m.id})">
+                  <div>
+                    <div class="member-nick">${esc(m.nickname)}</div>
+                    ${m.cp > 0 ? `<div class="member-cp">전투력 ${m.cp.toLocaleString()}</div>` : ''}
+                  </div>
+                  <span class="edit-arrow">›</span>
+                </button>`).join('')}
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="sub-header" style="top: 60px">
+          <h2 class="sub-title">전체 멤버</h2>
+          <button class="btn-add" onclick="openAdd()">+ 추가</button>
+        </div>
+        <div class="container">
+          ${groups || '<div class="empty" style="margin-top:40px">멤버가 없어요.<br>상단 추가 버튼을 눌러주세요.</div>'}
+        </div>`;
+    }
+
+    function renderAttendance() {
+      const filtered = state.members.filter(m => m.job === state.selectedJob);
+      const tabs = JOBS.map(job => {
+        const count = state.members.filter(m => m.job === job.name).length;
+        const isActive = job.name === state.selectedJob;
+        const style = isActive ? `background:${job.color};color:white;border-color:transparent` : '';
+        return `<button class="job-tab" style="${style}" onclick="selectJob('${esc(job.name)}')">${esc(job.name)} · ${count}</button>`;
+      }).join('');
+      const cards = filtered.length === 0
+        ? '<div class="empty" style="margin-top:40px">이 직업의 멤버가 없어요</div>'
+        : filtered.map(m => `
+          <div class="att-card">
+            <div class="att-nick">${esc(m.nickname)}</div>
+            <div class="day-grid">
+              ${DAYS.map(d => {
+                const st = state.attendance[`${m.id}_${d.key}`] || '-';
+                const s = STATUS_STYLES[st];
+                return `<button class="day-btn" style="background:${s.bg};color:${s.color};border-color:${s.border}" onclick="toggleAtt(${m.id},'${d.key}')">
+                          <span class="day-key">${d.key}</span>
+                          <span class="day-val">${st}</span>
+                        </button>`;
+              }).join('')}
+            </div>
+          </div>`).join('');
+      return `
+        <div style="background:#FAFAF8;position:sticky;top:60px;z-index:10">
+          <div class="job-tabs">${tabs}</div>
+          <div class="hint">요일 버튼을 탭하면 - → O → X 순으로 바뀝니다</div>
+        </div>
+        <div class="container" style="padding-top:12px">${cards}</div>`;
+    }
+
+    function renderStatus() {
+      const cards = DAYS.map(day => {
+        const attendees = state.members
+          .filter(m => state.attendance[`${m.id}_${day.key}`] === 'O')
+          .map(m => ({ ...m, jobColor: JOBS.find(j => j.name === m.job)?.color || '#999' }));
+        const body = attendees.length === 0
+          ? '<div class="empty" style="padding:10px">아직 참석자가 없어요</div>'
+          : `<div class="attendee-chips">
+              ${attendees.map(m => `
+                <span class="chip">
+                  <span class="chip-nick">${esc(m.nickname)}</span>
+                  <span class="chip-job" style="background:${m.jobColor}">${esc(m.job)}</span>
+                </span>`).join('')}
+            </div>`;
+        return `
+          <div class="day-card">
+            <div class="day-header" style="background:${day.color}">
+              <span>${esc(day.label)}</span>
+              <span class="day-count">${attendees.length}명</span>
+            </div>
+            <div class="day-body">${body}</div>
+          </div>`;
+      }).join('');
+      return `<div class="container" style="padding-top:12px">${cards}</div>`;
+    }
+
+    function renderNav() {
+      const tabs = [
+        { id: 'members', label: '멤버', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 3a4 4 0 11-8 0 4 4 0 018 0z"/>' },
+        { id: 'attendance', label: '출석', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>' },
+        { id: 'status', label: '현황', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3M16 7V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>' }
+      ];
+      return tabs.map(t => `
+        <button class="nav-btn ${state.tab === t.id ? 'active' : ''}" onclick="setTab('${t.id}')">
+          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+          <span class="nav-label">${t.label}</span>
+        </button>`).join('');
+    }
+
+    function renderForm() {
+      const m = state.editingMember;
+      const isEdit = !!m;
+      const nick = m?.nickname || '';
+      const job = m?.job || JOBS[0].name;
+      const cp = m?.cp ?? '';
+      const jobBtns = JOBS.map(j => {
+        const isActive = j.name === job;
+        const style = isActive ? `background:${j.color};color:white;border-color:transparent` : '';
+        return `<button class="job-pick-btn" style="${style}" data-job="${esc(j.name)}" onclick="selectFormJob(this)">${esc(j.name)}</button>`;
+      }).join('');
+      return `
+        <div class="modal-overlay" onclick="if(event.target===this) closeForm()">
+          <div class="modal-sheet">
+            <div class="modal-header">
+              <div class="modal-title">${isEdit ? '멤버 수정' : '멤버 추가'}</div>
+              <button class="modal-close" onclick="closeForm()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label class="form-label">닉네임</label>
+                <input type="text" id="f-nick" class="form-input" value="${esc(nick)}" placeholder="닉네임 입력" ${!isEdit ? 'autofocus' : ''}>
+              </div>
+              <div class="form-group">
+                <label class="form-label">직업</label>
+                <div class="job-picker">${jobBtns}</div>
+                <input type="hidden" id="f-job" value="${esc(job)}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">전투력</label>
+                <input type="number" id="f-cp" class="form-input" value="${cp}" placeholder="78500">
+              </div>
+            </div>
+            <div class="modal-footer">
+              ${isEdit ? '<button class="btn btn-delete" onclick="delMember()">🗑</button>' : ''}
+              <button class="btn btn-cancel" onclick="closeForm()">취소</button>
+              <button class="btn btn-save" onclick="saveForm()">${isEdit ? '저장' : '추가'}</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function setTab(tab) { setState({ tab }); }
+    function selectJob(job) { setState({ selectedJob: job }); }
+    function toggleAtt(id, day) {
+      const key = `${id}_${day}`;
+      const cur = state.attendance[key] || '-';
+      const next = cur === '-' ? 'O' : cur === 'O' ? 'X' : '-';
+      setState({ attendance: { ...state.attendance, [key]: next } });
+    }
+    function openAdd() { setState({ showForm: true, editingMember: null }); }
+    function openEdit(id) {
+      const m = state.members.find(x => x.id === id);
+      setState({ showForm: true, editingMember: m });
+    }
+    function closeForm() { setState({ showForm: false, editingMember: null }); }
+    function selectFormJob(btn) {
+      document.querySelectorAll('.job-pick-btn').forEach(b => { b.style.cssText = ''; });
+      const jobName = btn.dataset.job;
+      const job = JOBS.find(j => j.name === jobName);
+      btn.style.cssText = `background:${job.color};color:white;border-color:transparent`;
+      document.getElementById('f-job').value = jobName;
+    }
+    function saveForm() {
+      const nick = document.getElementById('f-nick').value.trim();
+      const job = document.getElementById('f-job').value;
+      const cp = parseInt(document.getElementById('f-cp').value) || 0;
+      if (!nick) { alert('닉네임을 입력해주세요'); return; }
+      if (state.editingMember) {
+        const updated = state.members.map(m => m.id === state.editingMember.id ? { ...m, nickname: nick, job, cp } : m);
+        setState({ members: updated, showForm: false, editingMember: null });
+      } else {
+        const newId = Math.max(0, ...state.members.map(m => m.id)) + 1;
+        setState({ members: [...state.members, { id: newId, nickname: nick, job, cp }], showForm: false });
+      }
+    }
+    function delMember() {
+      if (!confirm('정말 삭제할까요?')) return;
+      const id = state.editingMember.id;
+      const updated = state.members.filter(m => m.id !== id);
+      const newAtt = {};
+      Object.keys(state.attendance).forEach(k => {
+        if (!k.startsWith(`${id}_`)) newAtt[k] = state.attendance[k];
+      });
+      setState({ members: updated, attendance: newAtt, showForm: false, editingMember: null });
+    }
+
+    load();
+    render();
+  </script>
+</body>
+</html>
