@@ -352,7 +352,7 @@
         const isCurrent = m.nickname === state.myNickname;
         return `<button class="me-option${isCurrent ? ' active' : ''}" onclick="setMe('${esc(m.nickname)}')"><span class="row-nick">${esc(m.nickname)}</span><span class="job-badge-modal" style="background:${job.color}">${esc(m.job)}</span>${isCurrent ? '<span style="color:#F59E0B;font-weight:600;">✓</span>' : ''}</button>`;
       }).join('');
-      return `<div class="modal-overlay" onclick="if(event.target===this) closeMeModal()"><div class="modal-sheet"><div class="modal-header"><div class="modal-title">내 닉네임 설정</div><button class="modal-close" onclick="closeMeModal()">✕</button></div><div class="modal-body"><p style="font-size:13px;color:#6B7280;margin-bottom:14px;line-height:1.5;">본인 닉네임을 선택하면 출석 입력 시 본인 줄이 황금색으로 강조되고 맨 위에 표시돼요. (이 기기에만 저장)</p><div class="me-options">${list}</div>${state.myNickname ? '<button class="me-clear" onclick="setMe(\\'\\')">설정 해제</button>' : ''}</div></div></div>`;
+      return `<div class="modal-overlay" onclick="if(event.target===this) closeMeModal()"><div class="modal-sheet"><div class="modal-header"><div class="modal-title">내 닉네임 설정</div><button class="modal-close" onclick="closeMeModal()">✕</button></div><div class="modal-body"><p style="font-size:13px;color:#6B7280;margin-bottom:14px;line-height:1.5;">본인 닉네임을 선택하면 출석 입력 시 본인 줄이 황금색으로 강조되고 맨 위에 표시돼요. (이 기기에만 저장)</p><div class="me-options">${list}</div>${state.myNickname ? '<button class="me-clear" onclick="clearMe()">설정 해제</button>' : ''}</div></div></div>`;
     }
 
     function setTab(tab) { setState({ tab }); }
@@ -374,6 +374,7 @@
       state.showMeModal = false;
       render();
     }
+    function clearMe() { setMe(''); }
     function selectFormJob(btn) {
       document.querySelectorAll('.job-pick-btn').forEach(b => { b.style.cssText = ''; });
       const jobName = btn.dataset.job;
