@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="🎄트리">
   <title>🎄트리</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif; -webkit-font-smoothing: antialiased; }
@@ -15,13 +17,7 @@
     button { font-family: inherit; }
     #app { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 70px; }
 
-    header {
-      background: #2C3E50; color: white;
-      padding: 12px 16px;
-      padding-top: calc(12px + env(safe-area-inset-top));
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 20;
-    }
+    header { background: #2C3E50; color: white; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; }
     .h-title { font-weight: 600; font-size: 16px; }
     .h-count { font-size: 12px; opacity: 0.75; }
     main { flex: 1; }
@@ -31,6 +27,8 @@
     .btn-add { display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: #2C3E50; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
 
     .container { padding: 0 12px 16px; }
+
+    /* Members tab */
     .job-group { margin-bottom: 16px; }
     .job-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; color: white; margin-bottom: 8px; }
     .member-list { display: flex; flex-direction: column; gap: 6px; }
@@ -40,34 +38,52 @@
     .member-cp { font-size: 11px; color: #6B7280; margin-top: 2px; }
     .edit-arrow { color: #9CA3AF; font-size: 18px; }
 
-    .job-tabs { display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .job-tabs::-webkit-scrollbar { display: none; }
-    .job-tab { padding: 7px 12px; border-radius: 99px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid #E5E7EB; background: white; color: #475569; cursor: pointer; }
-    .hint { padding: 7px 16px; font-size: 11px; color: #64748B; background: #F1F5F9; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
+    /* Attendance tab - new layout */
+    .att-sticky { background: #FAFAF8; position: sticky; top: 60px; z-index: 10; border-bottom: 1px solid #E5E7EB; }
+    .activity-tabs { display: flex; gap: 6px; padding: 10px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .activity-tabs::-webkit-scrollbar { display: none; }
+    .activity-tab { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 500; white-space: nowrap; border: 1px solid #E5E7EB; background: white; color: #475569; cursor: pointer; }
+    .me-bar { background: #FFF7E6; border-top: 1px solid #FCD34D; padding: 6px 14px; font-size: 12px; color: #92400E; display: flex; justify-content: space-between; align-items: center; }
+    .me-bar strong { font-weight: 600; }
+    .me-bar button { background: transparent; border: none; color: #92400E; font-size: 12px; font-weight: 500; cursor: pointer; text-decoration: underline; padding: 0; }
+    .me-bar-prompt { padding: 8px 14px; background: #F1F5F9; }
+    .me-bar-prompt button { background: white; border: 1px solid #E5E7EB; color: #2C3E50; font-size: 12px; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; width: 100%; }
+    .hint { padding: 7px 16px; font-size: 11px; color: #64748B; background: #F1F5F9; border-bottom: 1px solid #E5E7EB; }
 
-    .att-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
-    .att-nick { font-weight: 500; font-size: 14px; color: #111827; margin-bottom: 8px; }
-    .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-    .day-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 0; border-radius: 6px; font-weight: 500; border: 1px solid; cursor: pointer; min-height: 46px; }
-    .day-key { font-size: 10px; opacity: 0.7; line-height: 1; }
-    .day-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+    .att-table { padding: 8px 10px 14px; }
+    .header-row-att { display: grid; grid-template-columns: 78px repeat(7, 1fr); gap: 3px; padding: 4px 4px 6px; }
+    .day-label { font-size: 11px; color: #6B7280; font-weight: 500; text-align: center; }
+    .member-row { display: grid; grid-template-columns: 78px repeat(7, 1fr); gap: 3px; padding: 6px 4px; border-radius: 6px; margin-bottom: 3px; align-items: center; background: white; border: 1px solid #E5E7EB; }
+    .member-row.me { background: #FFF7E6; border-color: #F59E0B; }
+    .member-info { display: flex; align-items: center; gap: 4px; min-width: 0; padding-left: 4px; }
+    .row-nick { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+    .job-mini { font-size: 10px; padding: 2px 5px; border-radius: 3px; font-weight: 500; color: white; flex-shrink: 0; }
+    .day-cell { border: 1px solid; border-radius: 4px; padding: 6px 0; font-size: 12px; font-weight: 500; text-align: center; cursor: pointer; min-height: 32px; }
 
+    /* Status tab */
     .day-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
     .day-header { padding: 10px 14px; color: white; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
     .day-count { font-size: 11px; background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 99px; }
-    .day-body { padding: 10px; }
-    .attendee-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 12px; }
+    .day-body { padding: 12px; }
+    .activity-section { margin-bottom: 12px; }
+    .activity-section:last-child { margin-bottom: 0; }
+    .activity-title { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    .activity-title .muted { color: #94A3B8; font-weight: 400; font-size: 11px; margin-left: 4px; }
+    .empty-tiny { font-size: 11px; color: #94A3B8; padding: 2px 0; }
+    .attendee-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 5px; font-size: 11px; }
     .chip-nick { font-weight: 500; color: #111827; }
-    .chip-job { color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; }
+    .chip-job { color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px; font-weight: 500; }
     .empty { text-align: center; color: #94A3B8; font-size: 12px; padding: 16px; }
 
+    /* Bottom nav */
     nav#bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #E5E7EB; display: grid; grid-template-columns: repeat(3, 1fr); z-index: 20; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
     .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px; background: none; border: none; cursor: pointer; color: #94A3B8; }
     .nav-btn.active { color: #1E293B; }
     .nav-icon { width: 22px; height: 22px; }
     .nav-label { font-size: 11px; font-weight: 500; }
 
+    /* Modals */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; display: flex; align-items: flex-end; }
     .modal-sheet { background: white; width: 100%; border-radius: 16px 16px 0 0; max-height: 90vh; display: flex; flex-direction: column; }
     .modal-header { padding: 14px 16px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; }
@@ -78,46 +94,45 @@
     .form-label { display: block; font-size: 12px; font-weight: 500; color: #4B5563; margin-bottom: 6px; }
     .form-input { width: 100%; padding: 11px 12px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px; font-family: inherit; }
     .form-input:focus { outline: none; border-color: #2C3E50; }
-    .job-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .job-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .job-pick-btn { padding: 10px 4px; border: 1px solid #E5E7EB; border-radius: 6px; background: white; color: #475569; font-size: 12px; font-weight: 500; cursor: pointer; }
     .modal-footer { padding: 12px 16px; border-top: 1px solid #E5E7EB; display: flex; gap: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
     .btn { padding: 11px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; }
     .btn-cancel { background: #F1F5F9; color: #334155; flex: 1; }
     .btn-save { background: #2C3E50; color: white; flex: 1; }
     .btn-delete { padding: 11px 14px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; font-size: 16px; }
+
+    /* Me modal options */
+    .me-options { display: flex; flex-direction: column; gap: 6px; }
+    .me-option { display: flex; align-items: center; gap: 8px; padding: 11px 12px; background: white; border: 1px solid #E5E7EB; border-radius: 8px; font-family: inherit; cursor: pointer; text-align: left; }
+    .me-option.active { background: #FFF7E6; border-color: #F59E0B; }
+    .me-option .row-nick { font-size: 14px; }
+    .job-badge-modal { color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .me-clear { margin-top: 14px; width: 100%; padding: 11px; background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
 <body>
   <div id="app"></div>
   <script>
-    // ============================================================
-    // 🔥 Firebase 설정 — 본인 프로젝트 값으로 교체하세요
-    // ============================================================
     const firebaseConfig = {
       apiKey: "AIzaSyD_HQGSE9bAR9yaz1jk8WU-SD1OCM9JkMg",
       authDomain: "tree-region.firebaseapp.com",
       databaseURL: "https://tree-region-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "tree-region"
     };
-
-    let db = null;
-    const configValid = true;  // 본인 Firebase 값 적용됨
-    if (configValid) {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-    }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     const JOBS = [
-      { name: '수호성', color: '#4F6F96' },
-      { name: '검성',   color: '#8B3A3A' },
-      { name: '궁성',   color: '#5F7F5F' },
-      { name: '살성',   color: '#6B4476' },
-      { name: '마도성', color: '#3F4E8B' },
-      { name: '정령성', color: '#3A7A78' },
-      { name: '호법성', color: '#A07642' },
-      { name: '치유성', color: '#B17188' },
+      { name: '수호성', color: '#4F6F96', short: '수' },
+      { name: '검성',   color: '#8B3A3A', short: '검' },
+      { name: '궁성',   color: '#5F7F5F', short: '궁' },
+      { name: '살성',   color: '#6B4476', short: '살' },
+      { name: '마도성', color: '#3F4E8B', short: '마' },
+      { name: '정령성', color: '#3A7A78', short: '정' },
+      { name: '호법성', color: '#A07642', short: '호' },
+      { name: '치유성', color: '#B17188', short: '치' },
+      { name: '권성',   color: '#C99B5C', short: '권' },
     ];
     const DAYS = [
       { key: '월', label: '월요일', color: '#4F6F96' },
@@ -128,6 +143,7 @@
       { key: '토', label: '토요일', color: '#8B3A3A' },
       { key: '일', label: '일요일', color: '#6B4476' },
     ];
+    const ACTIVITIES = ['성역1', '성역2', '성역3', '성역4', '어비스'];
     const SAMPLE = [
       { id: 1, nickname: '휘향',     job: '궁성',   cp: 0 },
       { id: 2, nickname: '무흑',     job: '검성',   cp: 0 },
@@ -145,61 +161,62 @@
 
     let state = {
       tab: 'members',
-      members: null, attendance: null,
-      selectedJob: '수호성', editingMember: null, showForm: false,
+      members: null,
+      attendance: null,
+      selectedActivity: '성역1',
+      myNickname: '',
+      editingMember: null,
+      showForm: false,
+      showMeModal: false,
       syncStatus: 'connecting'
     };
 
-    function initFirebaseSync() {
-      if (!db) return;
-      // 첫 사용 시 샘플 데이터로 초기화
-      db.ref('tree').once('value').then(snap => {
-        if (!snap.exists()) {
-          db.ref('tree/members').set(JSON.stringify(SAMPLE));
-          db.ref('tree/attendance').set('{}');
-        }
-      });
-      // 멤버 변경 실시간 감지
-      db.ref('tree/members').on('value', (snap) => {
-        try {
-          const v = snap.val();
-          state.members = v ? JSON.parse(v) : SAMPLE;
-          state.syncStatus = 'synced';
-        } catch (e) { state.syncStatus = 'error'; }
-        render();
-      });
-      // 출석 변경 실시간 감지
-      db.ref('tree/attendance').on('value', (snap) => {
-        try {
-          const v = snap.val();
-          state.attendance = v ? JSON.parse(v) : {};
-        } catch (e) {}
-        render();
-      });
-    }
+    try { state.myNickname = localStorage.getItem('tree_my_nickname') || ''; } catch (e) {}
+
+    db.ref('tree').once('value').then(snap => {
+      if (!snap.exists() || !snap.child('members').exists()) {
+        db.ref('tree/members').set(JSON.stringify(SAMPLE));
+      }
+      if (!snap.child('attendance_v2').exists()) {
+        db.ref('tree/attendance_v2').set('{}');
+      }
+    });
+
+    db.ref('tree/members').on('value', (snap) => {
+      try {
+        const v = snap.val();
+        state.members = v ? JSON.parse(v) : SAMPLE;
+        state.syncStatus = 'synced';
+      } catch (e) { state.syncStatus = 'error'; }
+      render();
+    });
+
+    db.ref('tree/attendance_v2').on('value', (snap) => {
+      try {
+        const v = snap.val();
+        state.attendance = v ? JSON.parse(v) : {};
+      } catch (e) {}
+      render();
+    });
+
     function save() {
-      if (!db) return;
-      db.ref('tree/members').set(JSON.stringify(state.members))
-        .catch(() => { state.syncStatus = 'error'; render(); });
-      db.ref('tree/attendance').set(JSON.stringify(state.attendance))
-        .catch(() => { state.syncStatus = 'error'; render(); });
+      db.ref('tree/members').set(JSON.stringify(state.members)).catch(() => { state.syncStatus = 'error'; render(); });
+      db.ref('tree/attendance_v2').set(JSON.stringify(state.attendance)).catch(() => { state.syncStatus = 'error'; render(); });
     }
+
     function setState(updates) {
       state = { ...state, ...updates };
-      save();
+      if ('members' in updates || 'attendance' in updates) save();
       render();
     }
+
     function esc(s) {
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     function render() {
       if (state.members === null || state.attendance === null) {
-        document.getElementById('app').innerHTML = `
-          <header><div class="h-title">🎄트리</div><div class="h-count">연결 중...</div></header>
-          <div style="padding:60px 20px;text-align:center;color:#94A3B8;font-size:14px;">
-            ⏳ 데이터 동기화 중...
-          </div>`;
+        document.getElementById('app').innerHTML = `<header><div class="h-title">🎄트리</div><div class="h-count">연결 중...</div></header><div style="padding:60px 20px;text-align:center;color:#94A3B8;font-size:14px;">⏳ 데이터 동기화 중...</div>`;
         return;
       }
       const scrollY = window.scrollY;
@@ -208,9 +225,7 @@
           <div class="h-title">🎄트리</div>
           <div class="h-count">
             ${state.members.length}명
-            ${state.syncStatus === 'synced' ? '<span style="color:#86EFAC;margin-left:6px;">●</span>' :
-              state.syncStatus === 'error' ? '<span style="color:#F87171;margin-left:6px;">●</span>' :
-              '<span style="opacity:0.5;margin-left:6px;">○</span>'}
+            ${state.syncStatus === 'synced' ? '<span style="color:#86EFAC;margin-left:6px;">●</span>' : state.syncStatus === 'error' ? '<span style="color:#F87171;margin-left:6px;">●</span>' : '<span style="opacity:0.5;margin-left:6px;">○</span>'}
           </div>
         </header>
         <main>
@@ -220,98 +235,90 @@
         </main>
         <nav id="bottom-nav">${renderNav()}</nav>
         ${state.showForm ? renderForm() : ''}
+        ${state.showMeModal ? renderMeModal() : ''}
       `;
       requestAnimationFrame(() => window.scrollTo(0, scrollY));
     }
 
     function renderMembers() {
       const grouped = {};
-      state.members.forEach(m => {
-        if (!grouped[m.job]) grouped[m.job] = [];
-        grouped[m.job].push(m);
-      });
+      state.members.forEach(m => { if (!grouped[m.job]) grouped[m.job] = []; grouped[m.job].push(m); });
       const groups = JOBS.map(job => {
         const list = grouped[job.name] || [];
         if (!list.length) return '';
-        return `
-          <div class="job-group">
-            <span class="job-badge" style="background:${job.color}">${esc(job.name)} · ${list.length}명</span>
-            <div class="member-list">
-              ${list.map(m => `
-                <button class="member-card" onclick="openEdit(${m.id})">
-                  <div>
-                    <div class="member-nick">${esc(m.nickname)}</div>
-                    ${m.cp > 0 ? `<div class="member-cp">전투력 ${m.cp.toLocaleString()}</div>` : ''}
-                  </div>
-                  <span class="edit-arrow">›</span>
-                </button>`).join('')}
-            </div>
-          </div>`;
-      }).join('');
-      return `
-        <div class="sub-header" style="top: 60px">
-          <h2 class="sub-title">전체 멤버</h2>
-          <button class="btn-add" onclick="openAdd()">+ 추가</button>
-        </div>
-        <div class="container">
-          ${groups || '<div class="empty" style="margin-top:40px">멤버가 없어요.<br>상단 추가 버튼을 눌러주세요.</div>'}
+        return `<div class="job-group">
+          <span class="job-badge" style="background:${job.color}">${esc(job.name)} · ${list.length}명</span>
+          <div class="member-list">
+            ${list.map(m => `<button class="member-card" onclick="openEdit(${m.id})"><div><div class="member-nick">${esc(m.nickname)}</div>${m.cp > 0 ? `<div class="member-cp">전투력 ${m.cp.toLocaleString()}</div>` : ''}</div><span class="edit-arrow">›</span></button>`).join('')}
+          </div>
         </div>`;
+      }).join('');
+      return `<div class="sub-header" style="top:60px"><h2 class="sub-title">전체 멤버</h2><button class="btn-add" onclick="openAdd()">+ 추가</button></div><div class="container">${groups || '<div class="empty" style="margin-top:40px">멤버가 없어요.</div>'}</div>`;
     }
 
     function renderAttendance() {
-      const filtered = state.members.filter(m => m.job === state.selectedJob);
-      const tabs = JOBS.map(job => {
-        const count = state.members.filter(m => m.job === job.name).length;
-        const isActive = job.name === state.selectedJob;
-        const style = isActive ? `background:${job.color};color:white;border-color:transparent` : '';
-        return `<button class="job-tab" style="${style}" onclick="selectJob('${esc(job.name)}')">${esc(job.name)} · ${count}</button>`;
+      const activity = state.selectedActivity;
+      const sortedMembers = [...state.members].sort((a, b) => {
+        if (a.nickname === state.myNickname) return -1;
+        if (b.nickname === state.myNickname) return 1;
+        const ai = JOBS.findIndex(j => j.name === a.job);
+        const bi = JOBS.findIndex(j => j.name === b.job);
+        return ai - bi;
+      });
+
+      const tabs = ACTIVITIES.map(act => {
+        const isActive = act === activity;
+        const style = isActive ? `background:#2C3E50;color:white;border-color:transparent` : '';
+        return `<button class="activity-tab" style="${style}" onclick="selectActivity('${esc(act)}')">${esc(act)}</button>`;
       }).join('');
-      const cards = filtered.length === 0
-        ? '<div class="empty" style="margin-top:40px">이 직업의 멤버가 없어요</div>'
-        : filtered.map(m => `
-          <div class="att-card">
-            <div class="att-nick">${esc(m.nickname)}</div>
-            <div class="day-grid">
-              ${DAYS.map(d => {
-                const st = state.attendance[`${m.id}_${d.key}`] || '-';
-                const s = STATUS_STYLES[st];
-                return `<button class="day-btn" style="background:${s.bg};color:${s.color};border-color:${s.border}" onclick="toggleAtt(${m.id},'${d.key}')">
-                          <span class="day-key">${d.key}</span>
-                          <span class="day-val">${st}</span>
-                        </button>`;
-              }).join('')}
-            </div>
-          </div>`).join('');
+
+      const meBar = state.myNickname
+        ? `<div class="me-bar"><span>나: <strong>${esc(state.myNickname)}</strong></span><button onclick="openMeModal()">변경</button></div>`
+        : `<div class="me-bar-prompt"><button onclick="openMeModal()">⭐ 내 닉네임 설정하면 내 줄을 강조해드려요</button></div>`;
+
+      const rows = sortedMembers.map(m => {
+        const isMe = m.nickname === state.myNickname;
+        const job = JOBS.find(j => j.name === m.job) || { color: '#999', short: '?' };
+        const cells = DAYS.map(d => {
+          const st = state.attendance[`${m.id}_${d.key}_${activity}`] || '-';
+          const s = STATUS_STYLES[st];
+          return `<button class="day-cell" style="background:${s.bg};color:${s.color};border-color:${s.border}" onclick="toggleAtt(${m.id},'${d.key}','${esc(activity)}')">${st}</button>`;
+        }).join('');
+        return `<div class="member-row${isMe ? ' me' : ''}"><div class="member-info"><span class="row-nick">${esc(m.nickname)}</span><span class="job-mini" style="background:${job.color}">${esc(job.short)}</span></div>${cells}</div>`;
+      }).join('');
+
       return `
-        <div style="background:#FAFAF8;position:sticky;top:60px;z-index:10">
-          <div class="job-tabs">${tabs}</div>
-          <div class="hint">요일 버튼을 탭하면 - → O → X 순으로 바뀝니다</div>
+        <div class="att-sticky">
+          <div class="activity-tabs">${tabs}</div>
+          ${meBar}
+          <div class="hint">탭하면 - → O → X 순환</div>
         </div>
-        <div class="container" style="padding-top:12px">${cards}</div>`;
+        <div class="att-table">
+          <div class="header-row-att">
+            <div></div>
+            ${DAYS.map(d => `<div class="day-label">${esc(d.key)}</div>`).join('')}
+          </div>
+          ${rows}
+        </div>
+      `;
     }
 
     function renderStatus() {
       const cards = DAYS.map(day => {
-        const attendees = state.members
-          .filter(m => state.attendance[`${m.id}_${day.key}`] === 'O')
-          .map(m => ({ ...m, jobColor: JOBS.find(j => j.name === m.job)?.color || '#999' }));
-        const body = attendees.length === 0
-          ? '<div class="empty" style="padding:10px">아직 참석자가 없어요</div>'
-          : `<div class="attendee-chips">
-              ${attendees.map(m => `
-                <span class="chip">
-                  <span class="chip-nick">${esc(m.nickname)}</span>
-                  <span class="chip-job" style="background:${m.jobColor}">${esc(m.job)}</span>
-                </span>`).join('')}
-            </div>`;
-        return `
-          <div class="day-card">
-            <div class="day-header" style="background:${day.color}">
-              <span>${esc(day.label)}</span>
-              <span class="day-count">${attendees.length}명</span>
-            </div>
-            <div class="day-body">${body}</div>
-          </div>`;
+        let totalSlots = 0;
+        const sections = ACTIVITIES.map(act => {
+          const attendees = state.members
+            .filter(m => state.attendance[`${m.id}_${day.key}_${act}`] === 'O')
+            .map(m => ({ ...m, jobColor: (JOBS.find(j => j.name === m.job) || {}).color || '#999' }));
+          totalSlots += attendees.length;
+          return { act, attendees };
+        });
+        const body = sections.map(({ act, attendees }) => `
+          <div class="activity-section">
+            <div class="activity-title">${esc(act)}<span class="muted">· ${attendees.length}명</span></div>
+            ${attendees.length === 0 ? '<div class="empty-tiny">참석자 없음</div>' : `<div class="attendee-chips">${attendees.map(m => `<span class="chip"><span class="chip-nick">${esc(m.nickname)}</span><span class="chip-job" style="background:${m.jobColor}">${esc(m.job)}</span></span>`).join('')}</div>`}
+          </div>`).join('');
+        return `<div class="day-card"><div class="day-header" style="background:${day.color}"><span>${esc(day.label)}</span><span class="day-count">${totalSlots} 슬롯</span></div><div class="day-body">${body}</div></div>`;
       }).join('');
       return `<div class="container" style="padding-top:12px">${cards}</div>`;
     }
@@ -322,11 +329,7 @@
         { id: 'attendance', label: '출석', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>' },
         { id: 'status', label: '현황', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3M16 7V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>' }
       ];
-      return tabs.map(t => `
-        <button class="nav-btn ${state.tab === t.id ? 'active' : ''}" onclick="setTab('${t.id}')">
-          <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${t.icon}</svg>
-          <span class="nav-label">${t.label}</span>
-        </button>`).join('');
+      return tabs.map(t => `<button class="nav-btn ${state.tab === t.id ? 'active' : ''}" onclick="setTab('${t.id}')"><svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${t.icon}</svg><span class="nav-label">${t.label}</span></button>`).join('');
     }
 
     function renderForm() {
@@ -340,51 +343,37 @@
         const style = isActive ? `background:${j.color};color:white;border-color:transparent` : '';
         return `<button class="job-pick-btn" style="${style}" data-job="${esc(j.name)}" onclick="selectFormJob(this)">${esc(j.name)}</button>`;
       }).join('');
-      return `
-        <div class="modal-overlay" onclick="if(event.target===this) closeForm()">
-          <div class="modal-sheet">
-            <div class="modal-header">
-              <div class="modal-title">${isEdit ? '멤버 수정' : '멤버 추가'}</div>
-              <button class="modal-close" onclick="closeForm()">✕</button>
-            </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label class="form-label">닉네임</label>
-                <input type="text" id="f-nick" class="form-input" value="${esc(nick)}" placeholder="닉네임 입력" ${!isEdit ? 'autofocus' : ''}>
-              </div>
-              <div class="form-group">
-                <label class="form-label">직업</label>
-                <div class="job-picker">${jobBtns}</div>
-                <input type="hidden" id="f-job" value="${esc(job)}">
-              </div>
-              <div class="form-group">
-                <label class="form-label">전투력</label>
-                <input type="number" id="f-cp" class="form-input" value="${cp}" placeholder="78500">
-              </div>
-            </div>
-            <div class="modal-footer">
-              ${isEdit ? '<button class="btn btn-delete" onclick="delMember()">🗑</button>' : ''}
-              <button class="btn btn-cancel" onclick="closeForm()">취소</button>
-              <button class="btn btn-save" onclick="saveForm()">${isEdit ? '저장' : '추가'}</button>
-            </div>
-          </div>
-        </div>`;
+      return `<div class="modal-overlay" onclick="if(event.target===this) closeForm()"><div class="modal-sheet"><div class="modal-header"><div class="modal-title">${isEdit ? '멤버 수정' : '멤버 추가'}</div><button class="modal-close" onclick="closeForm()">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">닉네임</label><input type="text" id="f-nick" class="form-input" value="${esc(nick)}" placeholder="닉네임 입력" ${!isEdit ? 'autofocus' : ''}></div><div class="form-group"><label class="form-label">직업</label><div class="job-picker">${jobBtns}</div><input type="hidden" id="f-job" value="${esc(job)}"></div><div class="form-group"><label class="form-label">전투력 (선택)</label><input type="number" id="f-cp" class="form-input" value="${cp}" placeholder="78500"></div></div><div class="modal-footer">${isEdit ? '<button class="btn btn-delete" onclick="delMember()">🗑</button>' : ''}<button class="btn btn-cancel" onclick="closeForm()">취소</button><button class="btn btn-save" onclick="saveForm()">${isEdit ? '저장' : '추가'}</button></div></div></div>`;
+    }
+
+    function renderMeModal() {
+      const list = state.members.map(m => {
+        const job = JOBS.find(j => j.name === m.job) || { color: '#999' };
+        const isCurrent = m.nickname === state.myNickname;
+        return `<button class="me-option${isCurrent ? ' active' : ''}" onclick="setMe('${esc(m.nickname)}')"><span class="row-nick">${esc(m.nickname)}</span><span class="job-badge-modal" style="background:${job.color}">${esc(m.job)}</span>${isCurrent ? '<span style="color:#F59E0B;font-weight:600;">✓</span>' : ''}</button>`;
+      }).join('');
+      return `<div class="modal-overlay" onclick="if(event.target===this) closeMeModal()"><div class="modal-sheet"><div class="modal-header"><div class="modal-title">내 닉네임 설정</div><button class="modal-close" onclick="closeMeModal()">✕</button></div><div class="modal-body"><p style="font-size:13px;color:#6B7280;margin-bottom:14px;line-height:1.5;">본인 닉네임을 선택하면 출석 입력 시 본인 줄이 황금색으로 강조되고 맨 위에 표시돼요. (이 기기에만 저장)</p><div class="me-options">${list}</div>${state.myNickname ? '<button class="me-clear" onclick="setMe(\\'\\')">설정 해제</button>' : ''}</div></div></div>`;
     }
 
     function setTab(tab) { setState({ tab }); }
-    function selectJob(job) { setState({ selectedJob: job }); }
-    function toggleAtt(id, day) {
-      const key = `${id}_${day}`;
+    function selectActivity(act) { setState({ selectedActivity: act }); }
+    function toggleAtt(id, day, act) {
+      const key = `${id}_${day}_${act}`;
       const cur = state.attendance[key] || '-';
       const next = cur === '-' ? 'O' : cur === 'O' ? 'X' : '-';
       setState({ attendance: { ...state.attendance, [key]: next } });
     }
     function openAdd() { setState({ showForm: true, editingMember: null }); }
-    function openEdit(id) {
-      const m = state.members.find(x => x.id === id);
-      setState({ showForm: true, editingMember: m });
-    }
+    function openEdit(id) { const m = state.members.find(x => x.id === id); setState({ showForm: true, editingMember: m }); }
     function closeForm() { setState({ showForm: false, editingMember: null }); }
+    function openMeModal() { setState({ showMeModal: true }); }
+    function closeMeModal() { setState({ showMeModal: false }); }
+    function setMe(nickname) {
+      try { localStorage.setItem('tree_my_nickname', nickname); } catch (e) {}
+      state.myNickname = nickname;
+      state.showMeModal = false;
+      render();
+    }
     function selectFormJob(btn) {
       document.querySelectorAll('.job-pick-btn').forEach(b => { b.style.cssText = ''; });
       const jobName = btn.dataset.job;
@@ -410,25 +399,8 @@
       const id = state.editingMember.id;
       const updated = state.members.filter(m => m.id !== id);
       const newAtt = {};
-      Object.keys(state.attendance).forEach(k => {
-        if (!k.startsWith(`${id}_`)) newAtt[k] = state.attendance[k];
-      });
+      Object.keys(state.attendance).forEach(k => { if (!k.startsWith(`${id}_`)) newAtt[k] = state.attendance[k]; });
       setState({ members: updated, attendance: newAtt, showForm: false, editingMember: null });
-    }
-
-    if (configValid) {
-      initFirebaseSync();
-    } else {
-      document.getElementById('app').innerHTML = `
-        <div style="padding:40px 24px;text-align:center;font-family:-apple-system,sans-serif;background:#FAFAF8;min-height:100vh;">
-          <div style="font-size:56px;margin-bottom:20px;">🔥</div>
-          <h2 style="color:#DC2626;font-size:18px;margin-bottom:14px;">Firebase 설정 필요</h2>
-          <p style="color:#6B7280;font-size:14px;line-height:1.7;">
-            HTML 상단의 <code style="background:#F3F4F6;padding:3px 7px;border-radius:4px;font-size:12px;">firebaseConfig</code> 부분을<br>
-            본인 Firebase 프로젝트 값으로 교체해주세요.
-          </p>
-        </div>
-      `;
     }
   </script>
 </body>
